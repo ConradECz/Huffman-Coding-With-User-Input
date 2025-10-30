@@ -1,0 +1,1 @@
+This program implements Huffman coding to efficiently compress text by assigning shorter binary codes to more frequent characters and longer codes to less frequent ones. It also demonstrates the process by encoding, decoding, and calculating the compression ratio of the input text.
