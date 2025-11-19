@@ -1,5 +1,8 @@
 import java.util.*;
-import java.util.Scanner;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.FileWriter;
+import java.io.IOException;
 
 class Node implements Comparable<Node> {
     int freq;                                                       // Frequency of the character(s)
@@ -170,73 +173,117 @@ public class huffmanCoding {
         return decoded.toString();
     }
 
+    // Function to save an array and runtime into a text file
+    private static void writeToFile(String filename, long runtimeMs, String... lines) {
+        try (FileWriter writer = new FileWriter(filename)) {
+            writer.write("Runtime: " + runtimeMs + " ms\n");
+            for (String line : lines) {
+                writer.write(line + "\n");
+            }
+            System.out.println("Wrote: " + filename + " (runtime: " + runtimeMs + " ms)");
+        } catch (IOException e) {
+            System.out.println("Error writing to " + filename + ": " + e.getMessage());
+        }
+    }
+
 
     // Main method to run the Huffman coding process
     public static void main(String[] args) {
         
         
-        // Read input text
-        Scanner scanner = new Scanner(System.in);
+        try (// Read input text
+        Scanner scanner = new Scanner(System.in)) {
+            System.out.println("Enter text to encode or into the .txt file: ");
+            
+            String input = scanner.nextLine().trim();
+            String text;
 
-        System.out.println("Enter text to encode: ");
-        String text = scanner.nextLine().toUpperCase();
+            // Handle empty input
+            if (input.endsWith(".txt")){
+                try{
+                    text = new String(Files.readAllBytes(Paths.get(input)));
+                    System.out.println("\nFile content loaded successfully.\n");
+                } catch (Exception e){
+                    System.out.println("Error reading file. Please ensure the file exists.");
+                    return;
+                }
+            } else {
+                text = input;
+            }
+
+            if (text.isEmpty()) {
+                System.out.println("Input text is empty. Exiting.");
+                return;
+            }
 
 
-        // Handle empty input
-        if (text.isEmpty()) {
-            System.out.println("No input provided.");
-            return;
+            // Display the input text
+            System.out.println("Text: " + text + "\n");
+
+
+            // Build Huffman tree and codes
+            Node root = buildHuffmanTree(text);
+            Map<Character, String> codes = buildCodes(root);
+
+            // Measuring runtime for encoding
+            long start = System.currentTimeMillis();
+            String encoded = encode(text, codes);
+            String decoded = decode(encoded, root);
+            long end = System.currentTimeMillis();
+            long runtimeMs = end - start;
+
+
+            // Calculate frequencies for display
+            Map<Character, Integer> freq = new HashMap<>();
+            for (char c : text.toCharArray()) {
+                freq.put(c, freq.getOrDefault(c, 0) + 1);
+            }
+
+
+            // Sort characters by frequency and lexicographically
+            List<Character> sortedChars = new ArrayList<>(codes.keySet());
+            sortedChars.sort((a, b) -> {
+                int cmp = Integer.compare(freq.get(b), freq.get(a));
+                return (cmp != 0) ? cmp : Character.compare(a, b);
+            });
+
+
+            // Display character frequencies and codes
+            System.out.println("Output:\n");
+            System.out.printf("%-10s %-10s %-15s%n", "Character", "Frequency", "Huffman Code");
+            for (char c : sortedChars) {
+                System.out.printf("%-10s %-10d %-15s%n", c, freq.get(c), codes.get(c));
+            }
+
+            // Save bits
+            writeToFile("encoded_output.txt", runtimeMs, encoded);
+
+            // Save text
+            writeToFile("decoded_output.txt", runtimeMs, decoded);
+
+
+            StringBuilder huffmanTable = new StringBuilder();
+            huffmanTable.append("Charcter\tFrequency\tHuffman Code\n");
+            for (char c : sortedChars) {
+                huffmanTable.append(c).append("\t").append(freq.get(c)).append("\t").append(codes.get(c)).append("\n");
+            }
+
+            // Save huffman table
+            writeToFile("huffman_table.txt", runtimeMs, huffmanTable.toString());
+
+
+            // Calculate and display compression ratio
+            int originalBits = text.length() * 8;
+            int compressedBits = encoded.length();
+            double ratio = (double) originalBits / compressedBits;
+
+
+            // Display results
+            System.out.println("\nEncoded: " + encoded);
+            System.out.println("Original Bits: " + text.length() + " * 8 = " + originalBits + " bits");
+            System.out.println("Compressed Bits: " + compressedBits + " bits");
+            System.out.printf("Compression Ratio: %.2f : 1%n", ratio);
+            System.out.println("Decoded Text: " + decoded);
         }
-
-
-        // Display the input text
-        System.out.println("Text: " + text + "\n");
-
-
-        // Build Huffman tree and codes
-        Node root = buildHuffmanTree(text);
-        Map<Character, String> codes = buildCodes(root);
-
-
-        // Calculate frequencies for display
-        Map<Character, Integer> freq = new HashMap<>();
-        for (char c : text.toCharArray()) {
-            freq.put(c, freq.getOrDefault(c, 0) + 1);
-        }
-
-
-        // Sort characters by frequency and lexicographically
-        List<Character> sortedChars = new ArrayList<>(codes.keySet());
-        sortedChars.sort((a, b) -> {
-            int cmp = Integer.compare(freq.get(b), freq.get(a));
-            return (cmp != 0) ? cmp : Character.compare(a, b);
-        });
-
-
-        // Display character frequencies and codes
-        System.out.println("Output:\n");
-        System.out.printf("%-10s %-10s %-15s%n", "Character", "Frequency", "Huffman Code");
-        for (char c : sortedChars) {
-            System.out.printf("%-10s %-10d %-15s%n", c, freq.get(c), codes.get(c));
-        }
-
-
-        // Encode and decode the text
-        String encoded = encode(text, codes);
-        String decoded = decode(encoded, root);
-
-
-        // Calculate and display compression ratio
-        int originalBits = text.length() * 8;
-        int compressedBits = encoded.length();
-        double ratio = (double) originalBits / compressedBits;
-
-
-        // Display results
-        System.out.println("\nEncoded: " + encoded);
-        System.out.println("Original Bits: " + text.length() + " * 8 = " + originalBits + " bits");
-        System.out.println("Compressed Bits: " + compressedBits + " bits");
-        System.out.printf("Compression Ratio: %.2f : 1%n", ratio);
-        System.out.println("Decoded Text: " + decoded);
     }
 }

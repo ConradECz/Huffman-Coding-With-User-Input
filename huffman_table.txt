@@ -1,0 +1,9 @@
+Runtime: 0 ms
+Charcter	Frequency	Huffman Code
+A	1	00
+C	1	100
+D	1	101
+N	1	01
+O	1	110
+R	1	111
+
